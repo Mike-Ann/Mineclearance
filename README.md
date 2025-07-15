@@ -4,7 +4,7 @@
 ### 环境要求
 - Python 3.6+
 - Pygame库
-- IDE PyCharm 2024.3.6
+- PyCharm 2024.3.6
 
 # 安装依赖
 pip install pygame
