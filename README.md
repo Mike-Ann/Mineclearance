@@ -46,6 +46,11 @@ pip install pygame
 python main.py
 ```
 
+###安装方式
+```bash
+双击Setup.exe文件，进行安装
+```
+
 ## 🎮 游戏操作
 
 | 操作 | 功能说明 |
@@ -117,3 +122,4 @@ MIT License - 详见LICENSE文件
 
 ---
 **享受游戏吧！** 🎲💣
+
