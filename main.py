@@ -57,7 +57,7 @@ class MineStatus(Enum):
 
 '''游戏相关参数'''
 FPS = 60
-GRIDSIZE = 30
+GRIDSIZE = 40
 NUM_MINES = 50
 GAME_MATRIX_SIZE = (30, 16)
 BORDERSIZE = 5
@@ -500,3 +500,4 @@ def main():
 '''run'''
 if __name__ == '__main__':
     main()
+
