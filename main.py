@@ -92,8 +92,8 @@ class Mine(pygame.sprite.Sprite):
         """设置周围地雷数量"""
         self.num_mines_around = count
 
-    def draw(self, screen):
-        """绘制地雷格子"""
+    def update_image(self):
+        """更新地雷图像"""
         image_map = {
             MineStatus.HIDDEN: 'blank',
             MineStatus.OPENED: 'mine' if self.is_mine else str(self.num_mines_around),
@@ -107,7 +107,6 @@ class Mine(pygame.sprite.Sprite):
         
         image_key = image_map.get(self.status_code, 'blank')
         self.image = self.images[image_key]
-        screen.blit(self.image, self.rect)
 
     @property
     def opened(self) -> bool:
@@ -121,17 +120,44 @@ class Mine(pygame.sprite.Sprite):
 
 '''文字板类'''
 class TextBoard(pygame.sprite.Sprite):
-    def __init__(self, text, font, position, color, **kwargs):
+    def __init__(self, text, font, position, color, bg_color=(0, 0, 0, 128), **kwargs):
         pygame.sprite.Sprite.__init__(self)
         self.text = text
         self.font = font
         self.position = position
         self.color = color
+        self.bg_color = bg_color
+        self.text_render = None
+        self.text_rect = None
+        self._render_text()
+    
+    def _render_text(self):
+        """渲染文本"""
+        self.text_render = self.font.render(self.text, True, self.color)
+        self.text_rect = self.text_render.get_rect()
+        self.text_rect.topleft = self.position
+    
     def draw(self, screen):
-        text_render = self.font.render(self.text, True, self.color)
-        screen.blit(text_render, self.position)
+        """绘制文本"""
+        if self.text_render:
+            # 绘制背景框
+            bg_rect = self.text_rect.inflate(10, 5)
+            bg_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(bg_surface, self.bg_color, bg_surface.get_rect(), border_radius=5)
+            screen.blit(bg_surface, bg_rect)
+            
+            # 绘制阴影
+            shadow_render = self.font.render(self.text, True, (0, 0, 0, 128))
+            screen.blit(shadow_render, (self.position[0] + 2, self.position[1] + 2))
+            
+            # 绘制文本
+            screen.blit(self.text_render, self.position)
+    
     def update(self, text):
-        self.text = text
+        """更新文本"""
+        if self.text != text:
+            self.text = text
+            self._render_text()
 
 '''表情按钮类'''
 class EmojiButton(pygame.sprite.Sprite):
@@ -147,6 +173,20 @@ class EmojiButton(pygame.sprite.Sprite):
 
     '''画到屏幕上'''
     def draw(self, screen):
+        # 绘制立体背景
+        bg_rect = self.rect.inflate(8, 8)
+        
+        # 绘制阴影
+        shadow_rect = bg_rect.inflate(4, 4)
+        shadow_rect.center = (bg_rect.center[0] + 2, bg_rect.center[1] + 2)
+        pygame.draw.rect(screen, (80, 80, 80), shadow_rect, border_radius=8)
+        
+        # 绘制背景
+        pygame.draw.rect(screen, (200, 200, 200), bg_rect, border_radius=8)
+        
+        # 绘制高光边框
+        pygame.draw.rect(screen, (255, 255, 255), bg_rect, 2, border_radius=8)
+        
         # 状态码为0, 代表正常的表情
         if self.status_code == 0:
             self.image = self.images['face_normal']
@@ -168,6 +208,7 @@ class MinesweeperMap():
     def __init__(self, images, **kwargs):
         self.images = images
         self.mines_matrix = []
+        self.mines_group = pygame.sprite.Group()
         self.game_state = GameState.NOT_STARTED
         self.mouse_pos = None
         self.mouse_pressed = None
@@ -182,7 +223,9 @@ class MinesweeperMap():
             mines_line = []
             for i in range(GAME_MATRIX_SIZE[0]):
                 position = i * GRIDSIZE + BORDERSIZE, (j + 2) * GRIDSIZE
-                mines_line.append(Mine(images=self.images, position=position))
+                mine = Mine(images=self.images, position=position)
+                mines_line.append(mine)
+                self.mines_group.add(mine)
             self.mines_matrix.append(mines_line)
     
     def _place_mines(self):
@@ -205,9 +248,12 @@ class MinesweeperMap():
 
     def draw(self, screen):
         """绘制游戏地图"""
+        # 更新所有地雷的图像
         for row in self.mines_matrix:
             for mine in row:
-                mine.draw(screen)
+                mine.update_image()
+        # 使用Group绘制所有地雷
+        self.mines_group.draw(screen)
 
     def set_game_state(self, state: GameState):
         """设置游戏状态"""
@@ -397,7 +443,7 @@ class GameManager:
         for key, value in IMAGE_PATHS.items():
             try:
                 if key in ['face_fail', 'face_normal', 'face_success']:
-                    image = pygame.image.load(value)
+                    image = pygame.image.load(value).convert_alpha()
                     images[key] = pygame.transform.smoothscale(
                         image, (int(GRIDSIZE*1.25), int(GRIDSIZE*1.25)))
                 else:
@@ -426,13 +472,13 @@ class GameManager:
         text_size = self.font.size(str(NUM_MINES))
         self.remaining_mines_text = TextBoard(
             str(NUM_MINES).zfill(3), self.font, 
-            (30, (GRIDSIZE*2-text_size[1])//2-2), RED)
+            (30, (GRIDSIZE*2-text_size[1])//2-2), RED, bg_color=(0, 0, 0, 180))
         
         # 计时器
         time_size = self.font.size('000')
         self.time_text = TextBoard(
             '000', self.font, 
-            (SCREENSIZE[0]-30-time_size[0], (GRIDSIZE*2-time_size[1])//2-2), RED)
+            (SCREENSIZE[0]-30-time_size[0], (GRIDSIZE*2-time_size[1])//2-2), RED, bg_color=(0, 0, 0, 180))
     
     def handle_events(self):
         """处理游戏事件"""
@@ -446,22 +492,17 @@ class GameManager:
                     mouse_pressed=mouse_pressed, mouse_pos=mouse_pos, type_='down')
             elif event.type == pygame.MOUSEBUTTONUP:
                 self.minesweeper_map.update(type_='up')
-                if self.emoji_button.rect.collidepoint(pygame.mouse.get_pos()):
+                # 只在游戏结束或胜利时检查表情按钮点击
+                if (self.minesweeper_map.game_state in [GameState.GAME_OVER, GameState.GAME_WON] and 
+                    self.emoji_button.rect.collidepoint(pygame.mouse.get_pos())):
                     self.reset_game()
         return True
     
     def update(self):
         """更新游戏状态"""
-        # 更新计时器
-        if self.minesweeper_map.is_playing:
-            if self.start_time is None:
-                self.start_time = time.time()
-            elapsed = int(time.time() - self.start_time)
-            self.time_text.update(str(min(elapsed, 999)).zfill(3))
-        
-        # 更新剩余地雷数
-        remaining = max(NUM_MINES - self.minesweeper_map.flags_count, 0)
-        self.remaining_mines_text.update(str(remaining).zfill(3))
+        # 更新计时器和剩余地雷数
+        self._update_timer()
+        self._update_mine_counter()
         
         # 检查游戏状态
         if self.minesweeper_map.game_state == GameState.GAME_OVER:
@@ -469,6 +510,23 @@ class GameManager:
         elif self.minesweeper_map.is_won:
             self.minesweeper_map.game_state = GameState.GAME_WON
             self.emoji_button.setstatus(status_code=2)
+    
+    def _update_timer(self):
+        """更新计时器"""
+        if self.minesweeper_map.is_playing:
+            if self.start_time is None:
+                self.start_time = time.time()
+            elapsed = int(time.time() - self.start_time)
+            # 只在时间变化时更新计时器文本
+            if self.time_text.text != str(min(elapsed, 999)).zfill(3):
+                self.time_text.update(str(min(elapsed, 999)).zfill(3))
+    
+    def _update_mine_counter(self):
+        """更新剩余地雷数"""
+        remaining = max(NUM_MINES - self.minesweeper_map.flags_count, 0)
+        # 只在剩余地雷数变化时更新文本
+        if self.remaining_mines_text.text != str(remaining).zfill(3):
+            self.remaining_mines_text.update(str(remaining).zfill(3))
     
     def draw(self):
         """绘制游戏画面"""
@@ -500,5 +558,4 @@ def main():
 '''run'''
 if __name__ == '__main__':
     main()
-
 
