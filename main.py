@@ -4,7 +4,7 @@ import time
 import random
 import pygame
 from enum import Enum
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 
 # 获取资源路径
@@ -500,4 +500,5 @@ def main():
 '''run'''
 if __name__ == '__main__':
     main()
+
 
