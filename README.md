@@ -115,7 +115,8 @@ A: 请确保您的系统满足最低要求。如果问题仍然存在，可以�
 欢迎提交Issue和Pull Request！
 
 ## 📄 许可证
-MIT License - 详见LICENSE文件
+MIT License
 
 ---
 **享受游戏吧！** 🎲💣
+
